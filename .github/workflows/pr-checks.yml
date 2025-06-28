@@ -1,0 +1,168 @@
+name: PR Quality Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  pr-validation:
+    name: PR Validation
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate PR title
+      run: |
+        # Check that PR title follows conventional commit format
+        title="${{ github.event.pull_request.title }}"
+        echo "PR Title: $title"
+        
+        # Allow these prefixes
+        if [[ $title =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci)(\(.+\))?: .+ ]]; then
+          echo "✅ PR title follows conventional commit format"
+        else
+          echo "❌ PR title should follow conventional commit format:"
+          echo "   feat: add new feature"
+          echo "   fix: bug fix"
+          echo "   docs: documentation changes"
+          echo "   style: code style changes"
+          echo "   refactor: code refactoring"
+          echo "   perf: performance improvements"
+          echo "   test: test changes"
+          echo "   chore: maintenance tasks"
+          echo "   ci: CI/CD changes"
+          exit 1
+        fi
+        
+    - name: Check PR description
+      run: |
+        # Check that PR has a meaningful description
+        description="${{ github.event.pull_request.body }}"
+        if [ ${#description} -lt 50 ]; then
+          echo "❌ PR description should be at least 50 characters"
+          echo "Current length: ${#description}"
+          exit 1
+        fi
+        echo "✅ PR description is adequate"
+        
+    - name: Check for linked issues
+      run: |
+        # Check if PR references an issue
+        description="${{ github.event.pull_request.body }}"
+        if [[ $description =~ (fixes|closes|resolves|relates to) #[0-9]+ ]]; then
+          echo "✅ PR references an issue"
+        else
+          echo "⚠️ Consider linking to a related issue using 'fixes #123' or 'relates to #123'"
+        fi
+
+  size-check:
+    name: PR Size Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Check PR size
+      run: |
+        # Count changed lines
+        changed_lines=$(git diff --stat ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | tail -1 | awk '{sum=$4+$6} END {print sum}')
+        
+        echo "Lines changed: $changed_lines"
+        
+        if [ $changed_lines -gt 1000 ]; then
+          echo "⚠️ Large PR detected ($changed_lines lines changed)"
+          echo "Consider breaking this into smaller PRs for easier review"
+        elif [ $changed_lines -gt 500 ]; then
+          echo "⚠️ Medium-large PR ($changed_lines lines changed)"
+          echo "Ensure adequate testing and documentation"
+        else
+          echo "✅ PR size is reasonable ($changed_lines lines changed)"
+        fi
+        
+    - name: Check file count
+      run: |
+        # Count changed files
+        changed_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | wc -l)
+        
+        echo "Files changed: $changed_files"
+        
+        if [ $changed_files -gt 20 ]; then
+          echo "⚠️ Many files changed ($changed_files files)"
+          echo "Consider breaking this into smaller, focused PRs"
+        else
+          echo "✅ File count is reasonable ($changed_files files)"
+        fi
+
+  security-pr-check:
+    name: Security PR Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Check for sensitive changes
+      run: |
+        echo "🔍 Checking for sensitive information in PR..."
+        
+        # Get list of changed files
+        changed_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+        
+        # Check for sensitive file changes
+        sensitive_patterns=("\.env" "\.key" "\.pem" "\.p12" "\.pfx" "secret" "password" "token")
+        
+        for file in $changed_files; do
+          for pattern in "${sensitive_patterns[@]}"; do
+            if [[ $file =~ $pattern ]] && [[ ! $file =~ \.example$ ]] && [[ ! $file =~ \.md$ ]]; then
+              echo "⚠️ Potentially sensitive file changed: $file"
+            fi
+          done
+        done
+        
+        # Check for added sensitive content
+        added_content=$(git diff ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | grep "^+" | grep -v "^+++")
+        
+        if echo "$added_content" | grep -q "eyJ"; then
+          echo "❌ Potential JWT token found in changes"
+          exit 1
+        fi
+        
+        if echo "$added_content" | grep -q "password\s*=\s*['\"]"; then
+          echo "❌ Potential hardcoded password found"
+          exit 1
+        fi
+        
+        echo "✅ No obvious sensitive information detected"
+
+  dependency-check:
+    name: Dependency Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Check for dependency changes
+      run: |
+        # Check if requirements files were modified
+        if git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | grep -q "requirements"; then
+          echo "📦 Dependency changes detected"
+          
+          # Show what changed
+          echo "Changes to requirements files:"
+          git diff ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} -- requirements*.txt
+          
+          echo "✅ Please ensure new dependencies are necessary and from trusted sources"
+        else
+          echo "✅ No dependency changes"
+        fi

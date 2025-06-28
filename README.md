@@ -1,5 +1,15 @@
 # OpenMetadata Migration Tool
 
+[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![OpenMetadata SDK](https://img.shields.io/badge/OpenMetadata%20SDK-1.8.0+-orange.svg)](https://pypi.org/project/openmetadata-ingestion/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+[![Code Quality](https://img.shields.io/badge/code%20quality-black%20%7C%20flake8%20%7C%20mypy-blue.svg)](https://github.com/psf/black)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-green.svg)](.github/workflows/ci.yml)
+[![Security](https://img.shields.io/badge/security-bandit%20%7C%20trivy-red.svg)](https://github.com/PyCQA/bandit)
+[![Testing](https://img.shields.io/badge/testing-pytest%20%7C%20coverage-blue.svg)](test_migration.py)
+
 A flexible, customizable Python tool for exporting and importing OpenMetadata entities. Supports full backups, selective exports, and cross-instance migrations with clear NDJSON output format.
 
 ## Features
@@ -381,7 +391,16 @@ advanced:
 
 ## License
 
-[Your License Here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### Third-Party Licenses
+
+This project uses the following open-source packages:
+- **OpenMetadata SDK**: Apache 2.0 License
+- **Rich**: MIT License  
+- **PyYAML**: MIT License
+- **Click**: BSD License
+- **python-dotenv**: BSD License
 
 ## Contributing
 

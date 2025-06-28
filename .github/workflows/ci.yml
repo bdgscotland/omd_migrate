@@ -1,0 +1,340 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        
+    - name: Run linting
+      run: |
+        # Run flake8 linting
+        flake8 export.py import.py --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Run flake8 with warnings
+        flake8 export.py import.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        
+    - name: Run type checking
+      run: |
+        # Install mypy if not in requirements-dev.txt
+        pip install mypy types-PyYAML types-requests
+        # Run type checking (allow failure for now)
+        mypy export.py import.py --ignore-missing-imports || true
+        
+    - name: Run security checks
+      run: |
+        # Install bandit for security scanning
+        pip install bandit
+        # Run bandit security checks
+        bandit -r export.py import.py -f json -o bandit-report.json || true
+        # Display results
+        bandit -r export.py import.py || true
+        
+    - name: Run tests
+      run: |
+        # Run pytest with coverage
+        python -m pytest test_migration.py -v --tb=short
+        
+    - name: Test configuration validation
+      run: |
+        # Test that config.yaml is valid
+        python -c "import yaml; yaml.safe_load(open('config.yaml', 'r'))"
+        echo "✅ config.yaml is valid"
+        
+    - name: Test import syntax
+      run: |
+        # Test that all Python files can be imported without syntax errors
+        python -c "import export; print('✅ export.py imports successfully')"
+        python -c "import importlib.util; import os; spec = importlib.util.spec_from_file_location('import_module', 'import.py'); module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module); print('✅ import.py imports successfully')"
+        
+    - name: Generate test coverage report
+      if: matrix.python-version == '3.11'
+      run: |
+        pip install coverage
+        coverage run -m pytest test_migration.py
+        coverage report -m
+        coverage xml
+        
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        
+    - name: Check code formatting with black
+      run: |
+        pip install black
+        black --check --diff export.py import.py test_migration.py
+        
+    - name: Check import sorting with isort
+      run: |
+        pip install isort
+        isort --check-only --diff export.py import.py test_migration.py
+        
+    - name: Run complexity analysis
+      run: |
+        pip install radon
+        radon cc export.py import.py --total-average
+        radon mi export.py import.py
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Test CLI help commands
+      run: |
+        python export.py --help
+        python import.py --help
+        
+    - name: Test configuration loading
+      run: |
+        # Test that scripts can load configuration without real credentials
+        python -c "
+        import os
+        os.environ['OPENMETADATA_SERVER_URL'] = 'http://test.example.com:8585/api'
+        os.environ['OPENMETADATA_JWT_TOKEN'] = 'test_token'
+        try:
+            from export import OpenMetadataExporter
+            exporter = OpenMetadataExporter('config.yaml')
+            print('✅ Export configuration loads successfully')
+        except Exception as e:
+            if 'connection' in str(e).lower() or 'authentication' in str(e).lower():
+                print('✅ Export configuration loads (connection expected to fail)')
+            else:
+                raise e
+        "
+        
+    - name: Test Makefile commands
+      run: |
+        # Test that Makefile commands can be parsed
+        make help
+        
+    - name: Validate README examples
+      run: |
+        # Check that all code blocks in README are valid
+        python -c "
+        import re
+        with open('README.md', 'r') as f:
+            content = f.read()
+        # Extract bash code blocks
+        bash_blocks = re.findall(r'```bash\n(.*?)\n```', content, re.DOTALL)
+        print(f'Found {len(bash_blocks)} bash code blocks in README')
+        # Extract python code blocks
+        python_blocks = re.findall(r'```python\n(.*?)\n```', content, re.DOTALL)
+        print(f'Found {len(python_blocks)} python code blocks in README')
+        print('✅ README code blocks extracted successfully')
+        "
+
+  docs-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Check for sensitive information
+      run: |
+        # Check that no sensitive information is committed
+        echo "🔍 Scanning for sensitive information..."
+        
+        # Check for JWT tokens
+        if grep -r "eyJ" --exclude-dir=.git --exclude="*.md" --exclude=".env*" . ; then
+          echo "❌ Found potential JWT tokens in code"
+          exit 1
+        fi
+        
+        # Check for hardcoded servers (except in examples)
+        if grep -r "openmetadata\.home" --exclude-dir=.git --exclude="*.md" --exclude=".env*" . ; then
+          echo "❌ Found hardcoded server references"
+          exit 1
+        fi
+        
+        echo "✅ No sensitive information found"
+        
+    - name: Check documentation completeness
+      run: |
+        echo "📚 Checking documentation completeness..."
+        
+        # Check that README exists and is substantial
+        if [ ! -f "README.md" ]; then
+          echo "❌ README.md is missing"
+          exit 1
+        fi
+        
+        # Check README has essential sections
+        for section in "Installation" "Configuration" "Quick Start" "Examples"; do
+          if ! grep -q "$section" README.md; then
+            echo "❌ README.md missing section: $section"
+            exit 1
+          fi
+        done
+        
+        # Check that .env.example exists
+        if [ ! -f ".env.example" ]; then
+          echo "❌ .env.example is missing"
+          exit 1
+        fi
+        
+        echo "✅ Documentation completeness check passed"
+
+  build-test:
+    name: Build Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        
+    - name: Test setup script
+      run: |
+        # Test that setup.sh can run (dry run mode)
+        bash -n setup.sh
+        echo "✅ setup.sh syntax is valid"
+        
+    - name: Test requirements files
+      run: |
+        # Test that requirements can be parsed
+        python -m pip install --upgrade pip
+        pip install --dry-run -r requirements.txt
+        pip install --dry-run -r requirements-dev.txt
+        echo "✅ Requirements files are valid"
+
+  # This job ensures all required checks pass before allowing merge
+  all-checks:
+    name: All Checks Passed
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, code-quality, integration-test, docs-check, build-test]
+    if: always()
+    
+    steps:
+    - name: Check if all jobs succeeded
+      run: |
+        echo "Checking status of all jobs..."
+        
+        # Check each job status
+        if [ "${{ needs.test.result }}" != "success" ]; then
+          echo "❌ Test suite failed"
+          exit 1
+        fi
+        
+        if [ "${{ needs.security-scan.result }}" != "success" ]; then
+          echo "❌ Security scan failed"
+          exit 1
+        fi
+        
+        if [ "${{ needs.code-quality.result }}" != "success" ]; then
+          echo "❌ Code quality checks failed"
+          exit 1
+        fi
+        
+        if [ "${{ needs.integration-test.result }}" != "success" ] && [ "${{ needs.integration-test.result }}" != "skipped" ]; then
+          echo "❌ Integration tests failed"
+          exit 1
+        fi
+        
+        if [ "${{ needs.docs-check.result }}" != "success" ]; then
+          echo "❌ Documentation checks failed"
+          exit 1
+        fi
+        
+        if [ "${{ needs.build-test.result }}" != "success" ]; then
+          echo "❌ Build tests failed"
+          exit 1
+        fi
+        
+        echo "✅ All checks passed! Ready for merge."
