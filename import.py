@@ -23,10 +23,18 @@ try:
     from metadata.generated.schema.api.domains.createDataProduct import (
         CreateDataProductRequest,
     )
-    from metadata.generated.schema.api.domains.createDomain import CreateDomainRequest
-    from metadata.generated.schema.api.policies.createPolicy import CreatePolicyRequest
-    from metadata.generated.schema.api.teams.createTeam import CreateTeamRequest
-    from metadata.generated.schema.api.teams.createUser import CreateUserRequest
+    from metadata.generated.schema.api.domains.createDomain import (
+        CreateDomainRequest,
+    )
+    from metadata.generated.schema.api.policies.createPolicy import (
+        CreatePolicyRequest,
+    )
+    from metadata.generated.schema.api.teams.createTeam import (
+        CreateTeamRequest,
+    )
+    from metadata.generated.schema.api.teams.createUser import (
+        CreateUserRequest,
+    )
     from metadata.generated.schema.entity.services.connections.metadata.openMetadataConnection import (
         OpenMetadataConnection,
     )
