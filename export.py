@@ -72,6 +72,10 @@ class OpenMetadataExporter:
             self.config['openmetadata']['auth']['jwt_token'] = os.getenv('OPENMETADATA_JWT_TOKEN')
         if os.getenv('EXPORT_OUTPUT_DIR'):
             self.config['export']['output_dir'] = os.getenv('EXPORT_OUTPUT_DIR')
+        if os.getenv('EXPORT_BATCH_SIZE'):
+            self.config['export']['batch_size'] = int(os.getenv('EXPORT_BATCH_SIZE'))
+        if os.getenv('EXPORT_INCLUDE_DELETED'):
+            self.config['export']['include_deleted'] = os.getenv('EXPORT_INCLUDE_DELETED').lower() == 'true'
     
     def _create_client(self) -> OpenMetadata:
         """Create OpenMetadata client from configuration."""
