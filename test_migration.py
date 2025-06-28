@@ -12,7 +12,15 @@ from unittest.mock import Mock, patch, MagicMock
 import yaml
 
 from export import OpenMetadataExporter
-import import as import_module
+# Import the import module by loading it as a module
+import importlib.util
+import sys
+import os
+
+# Load the import.py module
+spec = importlib.util.spec_from_file_location("import_module", os.path.join(os.path.dirname(__file__), "import.py"))
+import_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(import_module)
 OpenMetadataImporter = import_module.OpenMetadataImporter
 
 class TestOpenMetadataExporter:
@@ -220,7 +228,7 @@ class TestOpenMetadataImporter:
                 config_path = f.name
             
             try:
-                with patch('import_module.load_dotenv'):
+                with patch.object(import_module, 'load_dotenv'):
                     with patch.object(OpenMetadataImporter, '_create_client'):
                         importer = OpenMetadataImporter(config_path)
                         entities = importer._load_ndjson(ndjson_file)
@@ -242,7 +250,7 @@ class TestOpenMetadataImporter:
                 'IMPORT_INPUT_DIR': '/custom/import/dir',
                 'IMPORT_SKIP_ON_ERROR': 'false'
             }):
-                with patch('import_module.load_dotenv'):
+                with patch.object(import_module, 'load_dotenv'):
                     with patch.object(OpenMetadataImporter, '_create_client'):
                         importer = OpenMetadataImporter(config_path)
                         importer._apply_env_overrides()
@@ -301,7 +309,7 @@ class TestIntegration:
                 assert domains_file.exists()
                 
                 # Test import
-                with patch('import_module.load_dotenv'):
+                with patch.object(import_module, 'load_dotenv'):
                     with patch.object(OpenMetadataImporter, '_create_client'):
                         importer = OpenMetadataImporter(config_path)
                         

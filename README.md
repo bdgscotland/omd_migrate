@@ -18,11 +18,23 @@ A flexible, customizable Python tool for exporting and importing OpenMetadata en
 
 ### 1. Installation
 
+**Option A: Automated Setup (Recommended)**
 ```bash
 git clone <repository>
 cd omd_migrate
+./setup.sh
+```
+
+**Option B: Manual Installation**
+```bash
+git clone <repository>
+cd omd_migrate
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
+
+**Note**: The setup.sh script creates a virtual environment (`omd_venv`) and installs all dependencies automatically.
 
 ### 2. Configuration
 
@@ -277,6 +289,49 @@ python import.py --input-dir exports --entity-type data_products --dry-run
 - Adjust `batch_size` in configuration for large datasets
 - Use selective export for large instances
 - Monitor memory usage with `memory_limit_mb` setting
+
+## Development Commands (Makefile)
+
+The project includes a Makefile with useful development commands:
+
+```bash
+# Setup and cleanup
+make setup          # Run setup.sh to create virtual environment
+make clean          # Clean up virtual environment and exports
+make clean-exports  # Clean only export files
+
+# Testing
+make test           # Run all tests with pytest
+make test-verbose   # Run tests with verbose output
+
+# Export shortcuts
+make export         # Export all entities
+make export-clean   # Clean exports then export all
+make export-core    # Export core entities (domains, data_products, teams)
+
+# Import shortcuts  
+make import         # Import all entities
+make import-dry     # Dry run import (preview only)
+
+# Development
+make lint           # Run code linting (if configured)
+make format         # Format code (if configured)
+make help           # Show all available commands
+```
+
+**Usage Examples:**
+```bash
+# Quick setup and test
+make setup
+make export-core
+
+# Clean slate export
+make clean-exports
+make export
+
+# Safe import testing
+make import-dry
+```
 
 ## Configuration Reference
 
