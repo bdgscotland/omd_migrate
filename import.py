@@ -239,7 +239,7 @@ class OpenMetadataImporter:
                 result = self.om_client.create_or_update(request)
             elif entity_type == "domains":
                 request = CreateDomainRequest(**filtered_data)
-                result = self.om_client.create_or_update_domain(request)
+                result = self.om_client.create_or_update(request)
             elif entity_type == "teams":
                 request = CreateTeamRequest(**filtered_data)
                 result = self.om_client.create_or_update_team(request)
