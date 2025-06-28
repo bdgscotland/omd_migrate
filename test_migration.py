@@ -164,8 +164,7 @@ class TestOpenMetadataExporter:
                     exporter.om_client.list_entities.return_value = mock_response
 
                     # Test exporting with mock entity class
-                    from metadata.generated.schema.entity.domains.domain import \
-                        Domain
+                    from metadata.generated.schema.entity.domains.domain import Domain
 
                     count = exporter._export_entity_type(
                         "domains", Domain, Path(temp_dir)
