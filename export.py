@@ -5,40 +5,40 @@ Working OpenMetadata Export Tool with proper SDK integration
 
 import json
 import os
-import sys
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set
-import yaml
+from typing import Any, Dict, List, Optional, Set
+
 import click
+import yaml
+from dotenv import load_dotenv
+from rich import print as rprint
 from rich.console import Console
 from rich.progress import Progress, TaskID
 from rich.table import Table as RichTable
-from rich import print as rprint
-from dotenv import load_dotenv
 
 try:
-    from metadata.generated.schema.entity.services.databaseService import (
-        DatabaseService,
-    )
     from metadata.generated.schema.entity.data.database import Database
-    from metadata.generated.schema.entity.data.databaseSchema import DatabaseSchema
-    from metadata.generated.schema.entity.data.table import Table
-    from metadata.generated.schema.entity.teams.team import Team
-    from metadata.generated.schema.entity.teams.user import User
-    from metadata.generated.schema.entity.policies.policy import Policy
-    from metadata.generated.schema.entity.domains.domain import Domain
-    from metadata.generated.schema.entity.domains.dataProduct import DataProduct
+    from metadata.generated.schema.entity.data.databaseSchema import \
+        DatabaseSchema
     from metadata.generated.schema.entity.data.glossary import Glossary
     from metadata.generated.schema.entity.data.glossaryTerm import GlossaryTerm
+    from metadata.generated.schema.entity.data.table import Table
+    from metadata.generated.schema.entity.domains.dataProduct import \
+        DataProduct
+    from metadata.generated.schema.entity.domains.domain import Domain
+    from metadata.generated.schema.entity.policies.policy import Policy
+    from metadata.generated.schema.entity.services.connections.metadata.openMetadataConnection import \
+        OpenMetadataConnection
+    from metadata.generated.schema.entity.services.databaseService import \
+        DatabaseService
+    from metadata.generated.schema.entity.teams.team import Team
+    from metadata.generated.schema.entity.teams.user import User
+    from metadata.generated.schema.security.client.openMetadataJWTClientConfig import \
+        OpenMetadataJWTClientConfig
     from metadata.ingestion.ometa.ometa_api import OpenMetadata
-    from metadata.generated.schema.security.client.openMetadataJWTClientConfig import (
-        OpenMetadataJWTClientConfig,
-    )
-    from metadata.generated.schema.entity.services.connections.metadata.openMetadataConnection import (
-        OpenMetadataConnection,
-    )
 except ImportError as e:
     rprint(f"[red]Error importing OpenMetadata SDK: {e}[/red]")
     rprint(

@@ -228,15 +228,15 @@ jobs:
         # Check that no sensitive information is committed
         echo "🔍 Scanning for sensitive information..."
         
-        # Check for JWT tokens (avoiding false positives in workflows)
-        jwt_pattern="ey[A-Za-z0-9]"
-        if grep -r "$jwt_pattern" --exclude-dir=.git --exclude="*.md" --exclude=".env*" --exclude-dir=.github . ; then
+        # Check for JWT tokens (avoiding false positives in workflows and venv)
+        jwt_pattern="eyJ[A-Za-z0-9]"
+        if grep -r "$jwt_pattern" --exclude-dir=.git --exclude="*.md" --exclude=".env*" --exclude-dir=.github --exclude-dir=omd_venv . ; then
           echo "❌ Found potential JWT tokens in code"
           exit 1
         fi
         
-        # Check for hardcoded servers (except in examples)
-        if grep -r "openmetadata\.home" --exclude-dir=.git --exclude="*.md" --exclude=".env*" . ; then
+        # Check for hardcoded servers (except in examples and exports)
+        if grep -r "openmetadata\.home" --exclude-dir=.git --exclude="*.md" --exclude=".env*" --exclude-dir=exports . ; then
           echo "❌ Found hardcoded server references"
           exit 1
         fi

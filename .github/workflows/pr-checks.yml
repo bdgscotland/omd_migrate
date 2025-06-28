@@ -131,7 +131,7 @@ jobs:
         added_content=$(git diff ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | grep "^+" | grep -v "^+++")
         
         # Check for potential JWT tokens in added content (excluding .github directory)
-        jwt_pattern="ey[A-Za-z0-9]"
+        jwt_pattern="eyJ[A-Za-z0-9]"
         if echo "$added_content" | grep -v "\.github/" | grep -q "$jwt_pattern"; then
           echo "❌ Potential JWT token found in changes"
           exit 1

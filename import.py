@@ -9,30 +9,32 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
-import yaml
+from typing import Any, Dict, List, Optional, Union
+
 import click
+import yaml
+from dotenv import load_dotenv
+from rich import print as rprint
 from rich.console import Console
 from rich.progress import Progress, TaskID
 from rich.table import Table
-from rich import print as rprint
-from dotenv import load_dotenv
 
 try:
-    from metadata.generated.schema.api.domains.createDataProduct import (
-        CreateDataProductRequest,
-    )
-    from metadata.generated.schema.api.domains.createDomain import CreateDomainRequest
-    from metadata.generated.schema.api.teams.createTeam import CreateTeamRequest
-    from metadata.generated.schema.api.teams.createUser import CreateUserRequest
-    from metadata.generated.schema.api.policies.createPolicy import CreatePolicyRequest
+    from metadata.generated.schema.api.domains.createDataProduct import \
+        CreateDataProductRequest
+    from metadata.generated.schema.api.domains.createDomain import \
+        CreateDomainRequest
+    from metadata.generated.schema.api.policies.createPolicy import \
+        CreatePolicyRequest
+    from metadata.generated.schema.api.teams.createTeam import \
+        CreateTeamRequest
+    from metadata.generated.schema.api.teams.createUser import \
+        CreateUserRequest
+    from metadata.generated.schema.entity.services.connections.metadata.openMetadataConnection import \
+        OpenMetadataConnection
+    from metadata.generated.schema.security.client.openMetadataJWTClientConfig import \
+        OpenMetadataJWTClientConfig
     from metadata.ingestion.ometa.ometa_api import OpenMetadata
-    from metadata.generated.schema.security.client.openMetadataJWTClientConfig import (
-        OpenMetadataJWTClientConfig,
-    )
-    from metadata.generated.schema.entity.services.connections.metadata.openMetadataConnection import (
-        OpenMetadataConnection,
-    )
 except ImportError as e:
     rprint(f"[red]Error importing OpenMetadata SDK: {e}[/red]")
     rprint(

@@ -3,20 +3,19 @@
 Tests for OpenMetadata Migration Tool
 """
 
-import os
-import tempfile
-import pytest
+# Import the import module by loading it as a module
+import importlib.util
 import json
+import os
+import sys
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 import yaml
 
 from export import OpenMetadataExporter
-
-# Import the import module by loading it as a module
-import importlib.util
-import sys
-import os
 
 # Load the import.py module
 spec = importlib.util.spec_from_file_location(
@@ -165,7 +164,8 @@ class TestOpenMetadataExporter:
                     exporter.om_client.list_entities.return_value = mock_response
 
                     # Test exporting with mock entity class
-                    from metadata.generated.schema.entity.domains.domain import Domain
+                    from metadata.generated.schema.entity.domains.domain import \
+                        Domain
 
                     count = exporter._export_entity_type(
                         "domains", Domain, Path(temp_dir)
