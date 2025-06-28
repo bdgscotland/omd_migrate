@@ -1,0 +1,118 @@
+# OpenMetadata Migration Tool Configuration
+
+# OpenMetadata Server Configuration
+openmetadata:
+  # Server URL (required) - can be overridden by OPENMETADATA_SERVER_URL env var
+  server_url: "http://localhost:8585/api"
+  
+  # Authentication (choose one method)
+  auth:
+    # JWT Token Authentication - can be overridden by OPENMETADATA_JWT_TOKEN env var
+    jwt_token: "your_jwt_token_here"
+    
+    # Or Basic Authentication
+    # username: ""
+    # password: ""
+    
+    # Or OAuth2 Authentication  
+    # client_id: ""
+    # client_secret: ""
+    # auth_url: ""
+    # token_url: ""
+
+# Export Configuration
+export:
+  # Output directory for exported files - can be overridden by EXPORT_OUTPUT_DIR env var
+  output_dir: "./exports"
+  
+  # Selective export options
+  selective:
+    # Export specific domains by name (empty list = export all)
+    domains: []
+    # Export data products linked to specified domains only
+    linked_data_products_only: false
+    # Export assets (tables, topics, etc.) linked to specified domains/data products only  
+    linked_assets_only: false
+  
+  # Entities to export (set to true to include, false to exclude)
+  entities:
+    domains: true
+    data_products: true
+    glossaries: true
+    glossary_terms: true
+    teams: true
+    users: true
+    roles: true
+    policies: true
+    databases: true
+    database_schemas: true
+    tables: true
+    topics: true
+    dashboards: true
+    charts: true
+    pipelines: true
+    ml_models: true
+    containers: true
+    stored_procedures: true
+    dashboard_data_models: true
+    search_indexes: true
+    
+  # Export options
+  include_deleted: false
+  include_system_entities: false
+  batch_size: 100
+
+# Import Configuration  
+import:
+  # Input directory containing NDJSON files to import
+  input_dir: "./exports"
+  
+  # Import behavior
+  update_existing: true
+  skip_on_error: true
+  create_missing_dependencies: true
+  
+  # Import order (entities will be imported in this order to handle dependencies)
+  import_order:
+    - teams
+    - users
+    - roles
+    - policies
+    - domains
+    - glossaries
+    - glossary_terms
+    - databases
+    - database_schemas
+    - tables
+    - topics
+    - dashboards
+    - charts
+    - pipelines
+    - ml_models
+    - containers
+    - stored_procedures
+    - dashboard_data_models
+    - search_indexes
+    - data_products
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  console_output: true
+  file_output: false
+  log_file: "migration.log"
+
+# Advanced Options
+advanced:
+  # Request timeout in seconds
+  request_timeout: 30
+  
+  # Retry configuration
+  max_retries: 3
+  retry_delay: 1
+  
+  # Parallel processing
+  max_workers: 5
+  
+  # Memory management
+  memory_limit_mb: 1024
