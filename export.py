@@ -154,16 +154,25 @@ class OpenMetadataExporter:
             console.print(f"[blue]Exporting {entity_name}...[/blue]")
 
             # Use the OpenMetadata SDK to get all entities
-            entities_response = self.om_client.list_entities(
-                entity=entity_class, limit=10000
-            )
+            if entity_name == "domains":
+                entities_response = self.om_client.list_entities(
+                    entity=entity_class, limit=10000, fields=["parent"]
+                )
+            elif entity_name == "data_products":
+                entities_response = self.om_client.list_entities(
+                    entity=entity_class, limit=10000, fields=["domain", "extension"]
+                )
+            else:
+                entities_response = self.om_client.list_entities(
+                    entity=entity_class, limit=10000
+                )
 
             if hasattr(entities_response, "entities"):
                 entities = entities_response.entities
             else:
                 entities = []
 
-            console.print(f"[green]Retrieved {len(entities)} {entity_name}[/green]")
+            console.print(f"[green]Retrieved {len(entities)} {entity_name}[green]")
 
             # Convert entities to dictionaries using modern Pydantic
             entity_dicts = []
@@ -178,6 +187,58 @@ class OpenMetadataExporter:
                     entity_dict = (
                         entity.__dict__ if hasattr(entity, "__dict__") else dict(entity)
                     )
+
+                # --- Fix domainType for domains ---
+                if entity_name == "domains" and "domainType" in entity_dict:
+                    dt = entity_dict["domainType"]
+                    # Normalize to string
+                    if not isinstance(dt, str):
+                        dt = str(dt)
+                    # Map all possible variants to the expected string
+                    dt_map = {
+                        "Source-aligned": "Source-aligned",
+                        "Source_aligned": "Source-aligned",
+                        "DomainType.Source_aligned": "Source-aligned",
+                        "source-aligned": "Source-aligned",
+                        "source_aligned": "Source-aligned",
+                        "Consumer-aligned": "Consumer-aligned",
+                        "Consumer_aligned": "Consumer-aligned",
+                        "DomainType.Consumer_aligned": "Consumer-aligned",
+                        "consumer-aligned": "Consumer-aligned",
+                        "consumer_aligned": "Consumer-aligned",
+                        "Aggregate": "Aggregate",
+                        "DomainType.Aggregate": "Aggregate",
+                        "aggregate": "Aggregate",
+                    }
+                    entity_dict["domainType"] = dt_map.get(
+                        dt, "Source-aligned"
+                    )  # Default to Source-aligned if unknown
+
+                # --- Fix parent for domains ---
+                if entity_name == "domains":
+                    # Try to get parent from the entity object if not present in dict
+                    parent = entity_dict.get("parent")
+                    if not parent and hasattr(entity, "parent") and entity.parent:
+                        # Use id and fullyQualifiedName if available
+                        parent_obj = entity.parent
+                        parent_dict = {}
+                        if hasattr(parent_obj, "id"):
+                            parent_dict["id"] = str(parent_obj.id)
+                        if hasattr(parent_obj, "fullyQualifiedName"):
+                            parent_dict["fullyQualifiedName"] = str(parent_obj.fullyQualifiedName)
+                        if parent_dict:
+                            entity_dict["parent"] = parent_dict
+                        else:
+                            entity_dict["parent"] = None
+                    elif parent and isinstance(parent, dict):
+                        # Already present, keep only id and fullyQualifiedName
+                        entity_dict["parent"] = {
+                            k: parent[k]
+                            for k in ("id", "fullyQualifiedName")
+                            if k in parent
+                        }
+                    else:
+                        entity_dict["parent"] = None
 
                 entity_dicts.append(entity_dict)
 
