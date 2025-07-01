@@ -207,6 +207,11 @@ class OpenMetadataImporter:
                 "tags",
                 "extension",
             }
+
+            # Convert parent from dict to fullyQualifiedName if needed
+            if "parent" in entity_data and isinstance(entity_data["parent"], dict):
+                fqname = entity_data["parent"].get("fullyQualifiedName")
+                entity_data["parent"] = fqname if fqname else None
             return {k: v for k, v in entity_data.items() if k in allowed_fields}
         elif entity_type == "teams":
             # Add team-specific filtering here if needed
